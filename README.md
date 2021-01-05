@@ -1,3 +1,4 @@
+modify for openedu
 # Staff Graded Assignment XBlock
 
 This package provides an XBlock for use with the open edX platform which

@@ -36,6 +36,7 @@ function StaffGradedAssignmentXBlock(runtime, element) {
             $(content).find('.finalize-upload').on('click', function() {
               $.post(finalizeUploadUrl).success(
                   function (state) {
+                      location.reload();//guangyaw
                       render(state);
                   }
               ).fail(

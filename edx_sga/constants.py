@@ -16,3 +16,12 @@ class ShowAnswer(object):
     CORRECT_OR_PAST_DUE = "correct_or_past_due"
     PAST_DUE = "past_due"
     NEVER = "never"
+
+class ShowServer(object):
+    """
+    Constants for when to show server
+    """
+    OJ = "oj"
+    LAB = "lab"
+
+

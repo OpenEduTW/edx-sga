@@ -11,6 +11,10 @@ import os
 from contextlib import closing
 from zipfile import ZipFile
 
+# guangyaw add for grade
+import requests
+# guangyaw add for grade --end
+
 import pkg_resources
 import six
 import six.moves.urllib.error
@@ -47,6 +51,8 @@ from web_fragments.fragment import Fragment
 from xblockutils.studio_editable import StudioEditableXBlockMixin
 from xmodule.contentstore.content import StaticContent
 from xmodule.util.duedate import get_extended_due_date
+# guangyaw
+from edx_sga.constants import ShowServer
 
 log = logging.getLogger(__name__)
 
@@ -75,14 +81,33 @@ class StaffGradedAssignmentXBlock(StudioEditableXBlockMixin, ShowAnswerXBlockMix
     has_score = True
     icon_class = 'problem'
     STUDENT_FILEUPLOAD_MAX_SIZE = 4 * 1000 * 1000  # 4 MB
-    editable_fields = ('display_name', 'points', 'weight', 'showanswer', 'solution')
-
+#    editable_fields = ('display_name', 'points', 'weight', 'showanswer', 'solution')
+    editable_fields = ('display_name', 'grade_source', 'points', 'display_item_id') # , 'weight', 'showanswer', 'solution')
     display_name = String(
-        display_name=_("Display Name"),
-        default=_('Staff Graded Assignment'),
+        display_name=_("Problem Name"),
+        default=_("External Grade"),
         scope=Scope.settings,
         help=_("This name appears in the horizontal navigation at the top of "
-               "the page.")
+               "the page. Please modify as problem display id")
+    )
+
+    display_item_id = String(
+        display_name=_("LAB id"),
+        default=_(""),
+        scope=Scope.settings,
+        help=_("This should be the lab_id. Only for LAB ")
+    )
+
+    grade_source = String(
+        display_name=_("Select External Grade Server"),
+        help=_("Choose the external grade server"
+               "Default is OJ_server"),
+        scope=Scope.settings,
+        default=ShowServer.OJ,  # Default to ShowServer.OJ
+        values=[
+            {"display_name": _("OJ_server"), "value": ShowServer.OJ},
+            {"display_name": _("LAB_server"), "value": ShowServer.LAB},
+        ]
     )
 
     weight = Float(
@@ -276,6 +301,26 @@ class StaffGradedAssignmentXBlock(StudioEditableXBlockMixin, ShowAnswerXBlockMix
     @XBlock.handler
     def finalize_uploaded_assignment(self, request, suffix=''):
         # pylint: disable=unused-argument
+
+        # guangyaw modify
+        user = self.get_real_user()
+        require(user)
+
+        # Uploading an assignment represents a change of state with this user in this block,
+        # so we need to ensure that the user has a StudentModule record, which represents that state.
+        module = self.get_or_create_student_module(user)
+        answer = {
+            "sha1": None,
+            "filename": None,
+            "mimetype": None,
+            "finalized": False
+        }
+        student_item_dict = self.get_student_item_dict()
+        submissions_api.create_submission(student_item_dict, answer)
+        # path = self.file_storage_path(sha1, upload.file.name)
+        # log.info("Saving file: %s at path: %s for user: %s", upload.file.name, path, user.username)
+        log.info("user: %s", user.username)
+
         """
         Finalize a student's uploaded submission. This prevents further uploads for the
         given block, and makes the submission available to instructors for grading
@@ -284,10 +329,68 @@ class StaffGradedAssignmentXBlock(StudioEditableXBlockMixin, ShowAnswerXBlockMix
         require(self.upload_allowed(submission_data=submission_data))
         # Editing the Submission record directly since the API doesn't support it
         submission = Submission.objects.get(uuid=submission_data['uuid'])
-        if not submission.answer.get('finalized'):
-            submission.answer['finalized'] = True
-            submission.submitted_at = django_now()
-            submission.save()
+        # original code
+        # if not submission.answer.get('finalized'):
+        #     submission.answer['finalized'] = True
+        #     submission.submitted_at = django_now()
+        #     submission.save()
+        # original code --end
+        state = json.loads(module.state)
+
+        uuid = submission_data['uuid']
+# guangyaw
+# If need  , change the block for another external grade
+
+# state['comment'] is error message , if true , the show.html only display the error message
+# score is target grade , the value will show on show.html if no error message
+# retdata["error"] true , there is something wrong
+
+        if self.grade_source == ShowServer.OJ:
+            sdata = {"course_id": self.block_course_id, "stu_name": user.username, "problem_display": self.display_name}
+            # test data
+            # sdata = {"course_id": self.block_course_id, "stu_name": "guangyaw", "problem_display": self.display_name}
+            r = requests.get("https://oj.openedu.tw/api/zlogin", params=sdata)
+            retdata = json.loads(r.text)
+            log.info("%s", r.text)
+
+            if retdata["error"]:
+                score = 0
+                state['comment'] = retdata["data"]
+            else:
+                score = retdata["data"]["GetScore"]
+                state['comment'] = ''
+        elif self.grade_source == ShowServer.LAB:
+            # code for LAB
+            sdata = {"lab_id": self.display_item_id, "course_id": self.block_course_id, "stu_name": user.username, "problem_display": self.display_name}
+            r = requests.get("https://lab.openedu.tw/api/score/", params=sdata)
+            retdata = json.loads(r.text)
+            log.info("%s", r.text)
+
+            if retdata["error"]:
+                score = 0
+                state['comment'] = retdata["data"]
+            else:
+                score = retdata["data"]["GetScore"]
+                state['comment'] = ''
+# If need  , change the block for another external grade --end
+
+        state['staff_score'] = score
+        submissions_api.set_score(uuid, score, self.max_score())
+        module.state = json.dumps(state)
+        module.save()
+        log.info(
+            "enter_grade for course:%s module:%s student:%s",
+            module.course_id,
+            module.module_state_key,
+            module.student.username
+        )
+
+        if not retdata["error"]:
+            if not submission.answer.get('finalized'):
+                submission.answer['finalized'] = True
+                submission.submitted_at = django_now()
+                submission.save()
+        # guangyaw modify --end
         return Response(json_body=self.student_state())
 
     @XBlock.handler

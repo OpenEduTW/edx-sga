@@ -24,7 +24,9 @@ setup(
     version=edx_sga.__version__,
     description='edx-sga Staff Graded Assignment XBlock',
     license='Affero GNU General Public License v3 (GPLv3)',
-    url="https://github.com/mitodl/edx-sga",
+    # url="https://github.com/mitodl/edx-sga",
+    # author="MITx",
+    url="https://github.com/guangyawli/edx-sga",
     author="MITx",
     zip_safe=False,
     packages=find_packages(),
@@ -33,6 +35,7 @@ setup(
         'XBlock',
         'xblock-utils',
         'web_fragments',
+        'requests',
     ],
     entry_points={
         'xblock.v1': [

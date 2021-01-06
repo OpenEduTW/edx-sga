@@ -1060,7 +1060,7 @@ class StaffGradedAssignmentXBlock(StudioEditableXBlockMixin, ShowAnswerXBlockMix
         submission_data = submission_data if submission_data is not None else self.get_submission()
         return (
             not self.past_due() and
-            self.score is None and
+            # self.score is None and
             not is_finalized_submission(submission_data)
         )
 

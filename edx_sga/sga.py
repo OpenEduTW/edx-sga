@@ -346,7 +346,9 @@ class StaffGradedAssignmentXBlock(StudioEditableXBlockMixin, ShowAnswerXBlockMix
 # retdata["error"] true , there is something wrong
 
         if self.grade_source == ShowServer.OJ:
-            sdata = {"course_id": self.block_course_id, "stu_name": user.username, "problem_display": self.display_name}
+            name_tmp = str(user.username)
+            final_stu_name = name_tmp.lower()
+            sdata = {"course_id": self.block_course_id, "stu_name": final_stu_name, "problem_display": self.display_name}
             # test data
             # sdata = {"course_id": self.block_course_id, "stu_name": "guangyaw", "problem_display": self.display_name}
             r = requests.get("https://oj.openedu.tw/api/zlogin", params=sdata)

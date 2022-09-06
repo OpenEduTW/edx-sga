@@ -8,6 +8,7 @@ dist/
 .idea/
 .cache/
 build/
+local_settings.py
 
 ### Internationalization artifacts
 *.mo
@@ -18,4 +19,3 @@ build/
 !django.mo
 !djangojs.po
 !djangojs.mo
-

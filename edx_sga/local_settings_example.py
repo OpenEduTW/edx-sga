@@ -1,0 +1,2 @@
+OJ_DOMAIN = ''
+LAB_DOMAIN = ''

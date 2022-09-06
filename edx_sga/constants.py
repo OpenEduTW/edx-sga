@@ -17,11 +17,10 @@ class ShowAnswer(object):
     PAST_DUE = "past_due"
     NEVER = "never"
 
+
 class ShowServer(object):
     """
     Constants for when to show server
     """
     OJ = "oj"
     LAB = "lab"
-
-

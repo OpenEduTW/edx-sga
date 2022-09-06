@@ -53,6 +53,7 @@ from xmodule.contentstore.content import StaticContent
 from xmodule.util.duedate import get_extended_due_date
 # guangyaw
 from edx_sga.constants import ShowServer
+from edx_sga.local_settings import OJ_DOMAIN, LAB_DOMAIN
 
 log = logging.getLogger(__name__)
 
@@ -345,35 +346,26 @@ class StaffGradedAssignmentXBlock(StudioEditableXBlockMixin, ShowAnswerXBlockMix
 # score is target grade , the value will show on show.html if no error message
 # retdata["error"] true , there is something wrong
 
+        assert self.grade_source in (ShowServer.OJ, ShowServer.LAB), \
+            f'Grade source {self.grade_source} is illegal.'
         if self.grade_source == ShowServer.OJ:
             name_tmp = str(user.username)
             final_stu_name = name_tmp.lower()
-            sdata = {"course_id": self.block_course_id, "stu_name": final_stu_name, "problem_display": self.display_name}
-            # test data
-            # sdata = {"course_id": self.block_course_id, "stu_name": "guangyaw", "problem_display": self.display_name}
-            r = requests.get("https://oj.openedu.tw/api/zlogin", params=sdata)
-            retdata = json.loads(r.text)
-            log.info("%s", r.text)
+            sdata = {"stu_name": final_stu_name, "course_id": self.block_course_id, "problem_display": self.display_name}
+            r = requests.get(f"https://{OJ_DOMAIN}/api/zlogin", params=sdata)
+        else:
+            sdata = {"stu_name": user.username, "course_id": self.block_course_id, "lab_id": self.display_item_id}
+            r = requests.get(f"https://{LAB_DOMAIN}/api/score/", params=sdata)
 
-            if retdata["error"]:
-                score = 0
-                state['comment'] = retdata["data"]
-            else:
-                score = retdata["data"]["GetScore"]
-                state['comment'] = ''
-        elif self.grade_source == ShowServer.LAB:
-            # code for LAB
-            sdata = {"lab_id": self.display_item_id, "course_id": self.block_course_id, "stu_name": user.username, "problem_display": self.display_name}
-            r = requests.get("https://lab.openedu.tw/api/score/", params=sdata)
-            retdata = json.loads(r.text)
-            log.info("%s", r.text)
+        retdata = json.loads(r.text)
+        log.info("%s", r.text)
 
-            if retdata["error"]:
-                score = 0
-                state['comment'] = retdata["data"]
-            else:
-                score = retdata["data"]["GetScore"]
-                state['comment'] = ''
+        if retdata["error"]:
+            score = 0
+            state['comment'] = retdata["data"]
+        else:
+            score = retdata["data"]["GetScore"]
+            state['comment'] = ''
 # If need  , change the block for another external grade --end
 
         state['staff_score'] = score

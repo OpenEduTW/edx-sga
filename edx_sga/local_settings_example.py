@@ -1,3 +1,4 @@
 OJ_DOMAIN = ''
 LAB_DOMAIN = ''
 PYTUTOR_DOMAIN = ''
+SCT_DOMAIN = ''

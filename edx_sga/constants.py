@@ -25,3 +25,4 @@ class ShowServer(object):
     OJ = "oj"
     LAB = "lab"
     PYTUTOR = 'pytutor'
+    SCT = 'sct'
